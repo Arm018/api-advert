@@ -5,14 +5,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdvertRequest;
 use App\Http\Resources\AdvertResource;
-use App\Models\Advert;
+use App\Services\AdvertService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
+
 
 class AdvertController extends Controller
 {
+    private AdvertService $advertService;
+
+    public function __construct(AdvertService $advertService)
+    {
+        $this->advertService = $advertService;
+    }
+
     /**
      * Get a paginated list of adverts.
      *
@@ -21,19 +28,8 @@ class AdvertController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Advert::query();
-
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortDirection = $request->input('sort_direction', 'asc');
-
-        $validSortByFields = ['price', 'created_at'];
-        $validSortDirections = ['asc', 'desc'];
-
-        if (in_array($sortBy, $validSortByFields) && in_array($sortDirection, $validSortDirections)) {
-            $query->orderBy($sortBy, $sortDirection);
-        }
-
-        $adverts = $query->paginate(10);
+        $filters = $request->only(['sort_by', 'sort_direction']);
+        $adverts = $this->advertService->getAdverts($filters);
 
         return AdvertResource::collection($adverts);
     }
@@ -47,10 +43,10 @@ class AdvertController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $advert = Advert::findOrFail($id);
-
+        $advert = $this->advertService->getAdvertById($id);
         return new AdvertResource($advert);
     }
+
 
     /**
      * Create a new advert.
@@ -61,9 +57,7 @@ class AdvertController extends Controller
     public function store(AdvertRequest $request)
     {
         try {
-            $advert = new Advert();
-            $advert->fill($request->validated());
-            $advert->save();
+            $advert = $this->advertService->createAdvert($request->validated());
 
             return response()->json([
                 'id' => $advert->id,
@@ -72,9 +66,9 @@ class AdvertController extends Controller
         } catch (\Exception $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
-            ]);
+            ], 500);
         }
-
     }
+
 
 }

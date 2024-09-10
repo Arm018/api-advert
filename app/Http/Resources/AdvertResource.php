@@ -15,16 +15,15 @@ class AdvertResource extends JsonResource
     public function toArray($request)
     {
         $response = [
+            'id' => $this->id,
             'title' => $this->title,
+            'description' => $this->description,
             'price' => $this->price,
             'main_image' => $this->images[0] ?? null,
         ];
 
         if ($request->has('fields')) {
             $fields = explode(',', $request->input('fields'));
-            if (in_array('description', $fields)) {
-                $response['description'] = $this->description;
-            }
             if (in_array('images', $fields)) {
                 $response['images'] = $this->images;
             }
